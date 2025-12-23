@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Towers of Hanoi – Interactive Game</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+body {
+  background: linear-gradient(135deg, #1d2671, #c33764);
+  color: white;
+  font-family: 'Poppins', sans-serif;
+  text-align: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+h1 {
+  color: #ffeb3b;
+}
+
+.controls {
+  margin: 20px;
+}
+
+button, select {
+  padding: 10px 16px;
+  margin: 6px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+}
+
+button {
+  background: #00e5ff;
+  color: #003344;
+  font-weight: 600;
+}
+
+button:hover {
+  background: #00bcd4;
+}
+
+.game {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  height: 360px;
+  margin-top: 30px;
+}
+
+.rod {
+  width: 12px;
+  height: 250px;
+  background: #ffffff;
+  position: relative;
+  border-radius: 6px;
+}
+
+.base {
+  width: 170px;
+  height: 10px;
+  background: #eeeeee;
+  position: absolute;
+  bottom: -10px;
+  left: -79px;
+  border-radius: 6px;
+}
+
+.disk {
+  height: 20px;
+  border-radius: 20px;
+  position: absolute;
+  transition: all 0.3s ease;
+}
+
+.disk1 { width: 60px; background: #ff5252; }
+.disk2 { width: 80px; background: #ff9800; }
+.disk3 { width: 100px; background: #ffee58; }
+.disk4 { width: 120px; background: #69f0ae; }
+.disk5 { width: 140px; background: #40c4ff; }
+
+.info {
+  margin-top: 15px;
+  font-size: 18px;
+}
+
+/* 🫧 Bubble Animation */
+.bubble {
+  position: fixed;
+  bottom: -50px;
+  background: rgba(255,255,255,0.5);
+  border-radius: 50%;
+  animation: rise 6s linear infinite;
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-120vh);
+    opacity: 0;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎮 Towers of Hanoi – Algorithm Game</h1>
+
+<div class="controls">
+  <label>Disks:</label>
+  <select id="diskCount">
+    <option value="3">3</option>
+    <option value="4">4</option>
+    <option value="5">5</option>
+  </select>
+
+  <button onclick="startGame()">Start</button>
+  
+  <button onclick="nextStep()">Next ▶</button>
+  <button onclick="autoSolve()">Auto Solve </button>
+  <button onclick="reset()">Reset</button>
+</div>
+
+<div class="game">
+  <div class="rod" id="A"><div class="base"></div></div>
+  <div class="rod" id="B"><div class="base"></div></div>
+  <div class="rod" id="C"><div class="base"></div></div>
+</div>
+
+<div class="info">
+  Moves: <span id="moves">0</span>
+</div>
+
+<script>
+let rods = { A: [], B: [], C: [] };
+let autoMoves = [];
+let moveCount = 0;
+let ready = false;
+let manual = false;
+
+/* RESET */
+function reset() {
+  document.querySelectorAll(".disk").forEach(d => d.remove());
+  document.querySelectorAll(".bubble").forEach(b => b.remove());
+  rods = { A: [], B: [], C: [] };
+  autoMoves = [];
+  moveCount = 0;
+  ready = false;
+  manual = false;
+  document.getElementById("moves").innerText = moveCount;
+}
+
+/* START */
+function startGame() {
+  reset();
+  manual = false;
+  let n = parseInt(document.getElementById("diskCount").value);
+
+  for (let i = n; i >= 1; i--) {
+    let disk = document.createElement("div");
+    disk.className = `disk disk${i}`;
+    disk.dataset.size = i;
+    rods.A.push(disk);
+    document.getElementById("A").appendChild(disk);
+  }
+
+  updatePositions();
+  hanoi(n, 'A', 'C', 'B');
+  ready = true;
+}
+
+/* MANUAL MODE */
+function manualMode() {
+  reset();
+  manual = true;
+  let n = document.getElementById("diskCount").value;
+
+  for (let i = n; i >= 1; i--) {
+    let disk = document.createElement("div");
+    disk.className = `disk disk${i}`;
+    disk.onclick = () => selectDisk(disk);
+    rods.A.push(disk);
+    document.getElementById("A").appendChild(disk);
+  }
+
+  updatePositions();
+}
+
+let selectedDisk = null;
+let fromRod = null;
+
+function selectDisk(disk) {
+  let rod = disk.parentElement.id;
+  if (rods[rod][rods[rod].length - 1] !== disk) return;
+
+  if (!selectedDisk) {
+    selectedDisk = disk;
+    fromRod = rod;
+    disk.style.opacity = 0.6;
+  } else {
+    disk.style.opacity = 1;
+  }
+}
+
+document.querySelectorAll(".rod").forEach(r => {
+  r.onclick = () => {
+    if (!selectedDisk || !manual) return;
+    let toRod = r.id;
+    let top = rods[toRod][rods[toRod].length - 1];
+    if (top && top.dataset.size < selectedDisk.dataset.size) return;
+
+    rods[fromRod].pop();
+    rods[toRod].push(selectedDisk);
+    r.appendChild(selectedDisk);
+    selectedDisk.style.opacity = 1;
+    selectedDisk = null;
+    moveCount++;
+    document.getElementById("moves").innerText = moveCount;
+    updatePositions();
+    checkWin();
+  };
+});
+
+/* POSITION */
+function updatePositions() {
+  Object.keys(rods).forEach(r => {
+    rods[r].forEach((disk, i) => {
+      disk.style.bottom = i * 22 + "px";
+      disk.style.left = -(disk.offsetWidth / 2 - 6) + "px";
+    });
+  });
+}
+
+/* HANOI */
+function hanoi(n, from, to, aux) {
+  if (n === 0) return;
+  hanoi(n - 1, from, aux, to);
+  autoMoves.push([from, to]);
+  hanoi(n - 1, aux, to, from);
+}
+
+/* NEXT */
+function nextStep() {
+  if (!ready || manual || autoMoves.length === 0) return;
+  let [f, t] = autoMoves.shift();
+  moveDisk(f, t);
+}
+
+/* AUTO */
+function autoSolve() {
+  if (!ready || manual) return;
+  function play() {
+    if (autoMoves.length === 0) return;
+    let [f, t] = autoMoves.shift();
+    moveDisk(f, t);
+    setTimeout(play, 600);
+  }
+  play();
+}
+
+/* MOVE */
+function moveDisk(from, to) {
+  let disk = rods[from].pop();
+  rods[to].push(disk);
+  document.getElementById(to).appendChild(disk);
+  moveCount++;
+  document.getElementById("moves").innerText = moveCount;
+  updatePositions();
+  checkWin();
+}
+
+/* 🫧 BUBBLES ON COMPLETION */
+function checkWin() {
+  let total = document.getElementById("diskCount").value;
+  if (rods.C.length == total) {
+    createBubbles();
+  }
+}
+
+function createBubbles() {
+  for (let i = 0; i < 30; i++) {
+    let bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.style.left = Math.random() * 100 + "vw";
+    bubble.style.width = bubble.style.height = Math.random() * 30 + 10 + "px";
+    bubble.style.animationDuration = Math.random() * 3 + 4 + "s";
+    document.body.appendChild(bubble);
+  }
+}
+</script>
+
+</body>
+</html>
